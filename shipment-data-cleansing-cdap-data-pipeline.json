@@ -1,0 +1,215 @@
+{
+    "artifact": {
+        "name": "cdap-data-pipeline",
+        "version": "6.1.1",
+        "scope": "SYSTEM"
+    },
+    "description": "Pipeline that cleans raw shipment data and loads it into a logistics data lake.",
+    "name": "Shipment-Data-Cleansing",
+    "config": {
+        "resources": {
+            "memoryMB": 1024,
+            "virtualCores": 1
+        },
+        "driverResources": {
+            "memoryMB": 1024,
+            "virtualCores": 1
+        },
+        "connections": [
+            {
+                "from": "Raw Shipping Data",
+                "to": "Parse and Clean"
+            },
+            {
+                "from": "Parse and Clean",
+                "to": "Cleaned Shipments"
+            },
+            {
+                "from": "Parse and Clean",
+                "to": "Cleanup Errors"
+            },
+            {
+                "from": "Cleanup Errors",
+                "to": "Invalid Shipment Data"
+            }
+        ],
+        "comments": [],
+        "postActions": [],
+        "properties": {},
+        "processTimingEnabled": true,
+        "stageLoggingEnabled": true,
+        "stages": [
+            {
+                "name": "Raw Shipping Data",
+                "plugin": {
+                    "name": "GCSFile",
+                    "type": "batchsource",
+                    "label": "Raw Shipping Data",
+                    "artifact": {
+                        "name": "google-cloud",
+                        "version": "0.13.2",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "filenameOnly": "false",
+                        "copyHeader": "false",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"body\",\"type\":\"string\"}]}",
+                        "path": "gs://cloud-training/OCBL168/logistics/",
+                        "format": "text",
+                        "project": "cloud-training-prod-bucket",
+                        "recursive": "false",
+                        "referenceName": "Raw_Shipping_Data",
+                        "serviceFilePath": "auto-detect"
+                    }
+                },
+                "outputSchema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"body\",\"type\":\"string\"}]}"
+            },
+            {
+                "name": "Parse and Clean",
+                "plugin": {
+                    "name": "Wrangler",
+                    "type": "transform",
+                    "label": "Parse and Clean",
+                    "artifact": {
+                        "name": "wrangler-transform",
+                        "version": "4.1.4",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "workspaceId": "1921ec2484659206a9967b497dc93dd9",
+                        "directives": "parse-as-csv :body ',' false\ndrop body\nset columns shipment_id,shipping_date,shipping_time,origin_country,origin_city,destination_country,destination_city,customer_id,size,product,region_id,hazardous_goods,handle_with_care,time_to_ship,signature_required,weight,zipcode,price\nset-type :price float\nset-type :zipcode integer\nset-type :weight float\nfind-and-replace signature_required s/^Y$/true/g\nfind-and-replace signature_required s/^N$/false/g\nset-type :signature_required boolean\nfind-and-replace hazardous_goods s/^Y$/true/g\nfind-and-replace hazardous_goods s/^N$/false/g\nset-type :hazardous_goods boolean\nfind-and-replace handle_with_care s/^Y$/true/g\nfind-and-replace handle_with_care s/^N$/false/g",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"shipment_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"shipping_date\",\"type\":[\"string\",\"null\"]},{\"name\":\"shipping_time\",\"type\":[\"string\",\"null\"]},{\"name\":\"origin_country\",\"type\":[\"string\",\"null\"]},{\"name\":\"origin_city\",\"type\":[\"string\",\"null\"]},{\"name\":\"destination_country\",\"type\":[\"string\",\"null\"]},{\"name\":\"destination_city\",\"type\":[\"string\",\"null\"]},{\"name\":\"customer_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"size\",\"type\":[\"string\",\"null\"]},{\"name\":\"product\",\"type\":[\"string\",\"null\"]},{\"name\":\"region_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"hazardous_goods\",\"type\":[\"boolean\",\"null\"]},{\"name\":\"handle_with_care\",\"type\":[\"string\",\"null\"]},{\"name\":\"time_to_ship\",\"type\":[\"string\",\"null\"]},{\"name\":\"signature_required\",\"type\":[\"boolean\",\"null\"]},{\"name\":\"weight\",\"type\":[\"float\",\"null\"]},{\"name\":\"zipcode\",\"type\":[\"int\",\"null\"]},{\"name\":\"price\",\"type\":[\"float\",\"null\"]}]}",
+                        "field": "*",
+                        "precondition": "false",
+                        "threshold": "1"
+                    }
+                },
+                "outputSchema": [
+                    {
+                        "name": "etlSchemaBody",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"shipment_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"shipping_date\",\"type\":[\"string\",\"null\"]},{\"name\":\"shipping_time\",\"type\":[\"string\",\"null\"]},{\"name\":\"origin_country\",\"type\":[\"string\",\"null\"]},{\"name\":\"origin_city\",\"type\":[\"string\",\"null\"]},{\"name\":\"destination_country\",\"type\":[\"string\",\"null\"]},{\"name\":\"destination_city\",\"type\":[\"string\",\"null\"]},{\"name\":\"customer_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"size\",\"type\":[\"string\",\"null\"]},{\"name\":\"product\",\"type\":[\"string\",\"null\"]},{\"name\":\"region_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"hazardous_goods\",\"type\":[\"boolean\",\"null\"]},{\"name\":\"handle_with_care\",\"type\":[\"string\",\"null\"]},{\"name\":\"time_to_ship\",\"type\":[\"string\",\"null\"]},{\"name\":\"signature_required\",\"type\":[\"boolean\",\"null\"]},{\"name\":\"weight\",\"type\":[\"float\",\"null\"]},{\"name\":\"zipcode\",\"type\":[\"int\",\"null\"]},{\"name\":\"price\",\"type\":[\"float\",\"null\"]}]}"
+                    }
+                ],
+                "inputSchema": [
+                    {
+                        "name": "Raw Shipping Data",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"body\",\"type\":\"string\"}]}"
+                    }
+                ]
+            },
+            {
+                "name": "Cleaned Shipments",
+                "plugin": {
+                    "name": "BigQueryTable",
+                    "type": "batchsink",
+                    "label": "Cleaned Shipments",
+                    "artifact": {
+                        "name": "google-cloud",
+                        "version": "0.13.2",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "project": "auto-detect",
+                        "serviceFilePath": "auto-detect",
+                        "operation": "insert",
+                        "truncateTable": "false",
+                        "allowSchemaRelaxation": "false",
+                        "location": "US",
+                        "createPartitionedTable": "false",
+                        "partitionFilterRequired": "false",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"shipment_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"shipping_date\",\"type\":[\"string\",\"null\"]},{\"name\":\"shipping_time\",\"type\":[\"string\",\"null\"]},{\"name\":\"origin_country\",\"type\":[\"string\",\"null\"]},{\"name\":\"origin_city\",\"type\":[\"string\",\"null\"]},{\"name\":\"destination_country\",\"type\":[\"string\",\"null\"]},{\"name\":\"destination_city\",\"type\":[\"string\",\"null\"]},{\"name\":\"customer_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"size\",\"type\":[\"string\",\"null\"]},{\"name\":\"product\",\"type\":[\"string\",\"null\"]},{\"name\":\"region_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"hazardous_goods\",\"type\":[\"boolean\",\"null\"]},{\"name\":\"handle_with_care\",\"type\":[\"string\",\"null\"]},{\"name\":\"time_to_ship\",\"type\":[\"string\",\"null\"]},{\"name\":\"signature_required\",\"type\":[\"boolean\",\"null\"]},{\"name\":\"weight\",\"type\":[\"float\",\"null\"]},{\"name\":\"zipcode\",\"type\":[\"int\",\"null\"]},{\"name\":\"price\",\"type\":[\"float\",\"null\"]}]}",
+                        "referenceName": "Cleaned-Shipments",
+                        "dataset": "logistics_demo",
+                        "table": "delayed_shipments_us"
+                    }
+                },
+                "outputSchema": [
+                    {
+                        "name": "etlSchemaBody",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"shipment_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"shipping_date\",\"type\":[\"string\",\"null\"]},{\"name\":\"shipping_time\",\"type\":[\"string\",\"null\"]},{\"name\":\"origin_country\",\"type\":[\"string\",\"null\"]},{\"name\":\"origin_city\",\"type\":[\"string\",\"null\"]},{\"name\":\"destination_country\",\"type\":[\"string\",\"null\"]},{\"name\":\"destination_city\",\"type\":[\"string\",\"null\"]},{\"name\":\"customer_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"size\",\"type\":[\"string\",\"null\"]},{\"name\":\"product\",\"type\":[\"string\",\"null\"]},{\"name\":\"region_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"hazardous_goods\",\"type\":[\"boolean\",\"null\"]},{\"name\":\"handle_with_care\",\"type\":[\"string\",\"null\"]},{\"name\":\"time_to_ship\",\"type\":[\"string\",\"null\"]},{\"name\":\"signature_required\",\"type\":[\"boolean\",\"null\"]},{\"name\":\"weight\",\"type\":[\"float\",\"null\"]},{\"name\":\"zipcode\",\"type\":[\"int\",\"null\"]},{\"name\":\"price\",\"type\":[\"float\",\"null\"]}]}"
+                    }
+                ],
+                "inputSchema": [
+                    {
+                        "name": "Parse and Clean",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"shipment_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"shipping_date\",\"type\":[\"string\",\"null\"]},{\"name\":\"shipping_time\",\"type\":[\"string\",\"null\"]},{\"name\":\"origin_country\",\"type\":[\"string\",\"null\"]},{\"name\":\"origin_city\",\"type\":[\"string\",\"null\"]},{\"name\":\"destination_country\",\"type\":[\"string\",\"null\"]},{\"name\":\"destination_city\",\"type\":[\"string\",\"null\"]},{\"name\":\"customer_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"size\",\"type\":[\"string\",\"null\"]},{\"name\":\"product\",\"type\":[\"string\",\"null\"]},{\"name\":\"region_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"hazardous_goods\",\"type\":[\"boolean\",\"null\"]},{\"name\":\"handle_with_care\",\"type\":[\"string\",\"null\"]},{\"name\":\"time_to_ship\",\"type\":[\"string\",\"null\"]},{\"name\":\"signature_required\",\"type\":[\"boolean\",\"null\"]},{\"name\":\"weight\",\"type\":[\"float\",\"null\"]},{\"name\":\"zipcode\",\"type\":[\"int\",\"null\"]},{\"name\":\"price\",\"type\":[\"float\",\"null\"]}]}"
+                    }
+                ]
+            },
+            {
+                "name": "Cleanup Errors",
+                "plugin": {
+                    "name": "ErrorCollector",
+                    "type": "errortransform",
+                    "label": "Cleanup Errors",
+                    "artifact": {
+                        "name": "core-plugins",
+                        "version": "2.3.4",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "messageField": "msg",
+                        "codeField": "code",
+                        "stageField": "node"
+                    }
+                },
+                "outputSchema": [
+                    {
+                        "name": "etlSchemaBody",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"body\",\"type\":\"string\"},{\"name\":\"msg\",\"type\":\"string\"},{\"name\":\"code\",\"type\":\"int\"},{\"name\":\"node\",\"type\":\"string\"}]}"
+                    }
+                ],
+                "inputSchema": [
+                    {
+                        "name": "Parse and Clean",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"body\",\"type\":\"string\"}]}"
+                    }
+                ]
+            },
+            {
+                "name": "Invalid Shipment Data",
+                "plugin": {
+                    "name": "BigQueryTable",
+                    "type": "batchsink",
+                    "label": "Invalid Shipment Data",
+                    "artifact": {
+                        "name": "google-cloud",
+                        "version": "0.13.2",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "project": "auto-detect",
+                        "serviceFilePath": "auto-detect",
+                        "operation": "insert",
+                        "truncateTable": "false",
+                        "allowSchemaRelaxation": "false",
+                        "location": "US",
+                        "createPartitionedTable": "false",
+                        "partitionFilterRequired": "false",
+                        "referenceName": "Invalid-Shipment-Data",
+                        "table": "invalid_shipment_data",
+                        "dataset": "logistics_demo",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"body\",\"type\":\"string\"},{\"name\":\"msg\",\"type\":\"string\"},{\"name\":\"code\",\"type\":\"int\"},{\"name\":\"node\",\"type\":\"string\"}]}"
+                    }
+                },
+                "outputSchema": [
+                    {
+                        "name": "etlSchemaBody",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"body\",\"type\":\"string\"},{\"name\":\"msg\",\"type\":\"string\"},{\"name\":\"code\",\"type\":\"int\"},{\"name\":\"node\",\"type\":\"string\"}]}"
+                    }
+                ],
+                "inputSchema": [
+                    {
+                        "name": "Cleanup Errors",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"body\",\"type\":\"string\"},{\"name\":\"msg\",\"type\":\"string\"},{\"name\":\"code\",\"type\":\"int\"},{\"name\":\"node\",\"type\":\"string\"}]}"
+                    }
+                ]
+            }
+        ],
+        "schedule": "0 * * * *",
+        "engine": "mapreduce",
+        "numOfRecordsPreview": 100,
+        "description": "Pipeline that cleans raw shipment data and loads it into a logistics data lake.",
+        "maxConcurrentRuns": 1
+    }
+}
